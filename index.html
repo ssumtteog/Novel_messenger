@@ -1,0 +1,829 @@
+<title>읽음</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;500&display=swap">
+<style>
+/* Layout: one 390x844 messenger phone, scaled to fit. Grayscale UI; the only red in the app is the dot on 문오언 and her cover. */
+:root{
+  --page:#E7E8EA; --surface:#FAFAF9; --ink:#1D1E21; --ink2:#6A6C72; --ink3:#9A9CA2; --line:#E3E3E0;
+  --in:#EEEEEC; --out:#25272B; --on-out:#F4F4F2; --av-bg:#E8E8E5; --av-ink:#55575C; --chip:#F0F0EE;
+  --frame:0 28px 70px rgba(20,22,26,.18),0 0 0 1px rgba(20,22,26,.1);
+  --dot:#C0302E;
+  --sans:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --serif:"Noto Serif KR","Nanum Myeongjo","Apple Myungjo",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#0E0F11; --surface:#17181B; --ink:#EDEDEB; --ink2:#A3A5AB; --ink3:#6F7177; --line:#26272B;
+  --in:#25272B; --out:#E9E9E6; --on-out:#1A1B1E; --av-bg:#2A2B2F; --av-ink:#B6B8BE; --chip:#222327;
+  --frame:0 28px 70px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#0E0F11; --surface:#17181B; --ink:#EDEDEB; --ink2:#A3A5AB; --ink3:#6F7177; --line:#26272B;
+  --in:#25272B; --out:#E9E9E6; --on-out:#1A1B1E; --av-bg:#2A2B2F; --av-ink:#B6B8BE; --chip:#222327;
+  --frame:0 28px 70px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+:focus-visible{outline:2px solid var(--ink2);outline-offset:2px}
+.stage{min-height:100%;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.scaler{position:relative;flex:none}
+.phone{position:absolute;left:0;top:0;width:390px;height:844px;transform-origin:0 0;background:var(--surface);border-radius:46px;overflow:hidden;box-shadow:var(--frame);isolation:isolate}
+.reset{font-size:13px;color:var(--ink2);padding:8px 14px;border-radius:999px;border:1px solid var(--line)}
+.themebtn{position:fixed;top:12px;right:12px;z-index:50;font-size:13px;color:var(--ink2);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--page)}
+.themebtn:hover{color:var(--ink);border-color:var(--ink3)}
+.reset:hover{color:var(--ink);border-color:var(--ink3)}
+
+.screen{position:absolute;inset:0;background:var(--surface);will-change:transform}
+.screen[data-pos="right"]{transform:translateX(100%)}
+.screen[data-pos="left"]{transform:translateX(-28%)}
+.screen[data-pos="out"]{opacity:0}
+.screen:not([data-pos="center"]){visibility:hidden;pointer-events:none;transition:transform .42s cubic-bezier(.2,.8,.2,1),opacity .3s,visibility 0s .42s}
+.screen[data-pos="center"]{visibility:visible;transition:transform .42s cubic-bezier(.2,.8,.2,1),opacity .3s}
+@media (prefers-reduced-motion:reduce){.screen,.screen:not([data-pos="center"]){transition-duration:.01s!important;transition-delay:0s!important}}
+
+.sb{position:absolute;left:0;right:0;top:0;height:44px;padding:14px 30px 0;display:flex;justify-content:space-between;font-size:14px;font-weight:500;z-index:6;pointer-events:none}
+.sb.light{color:#F2F2F0}
+.sb .bat{width:24px;height:11px;border:1.5px solid currentColor;border-radius:3.5px;position:relative;margin-top:2px;opacity:.85}
+.sb .bat:after{content:"";position:absolute;inset:1.5px;right:7px;background:currentColor;border-radius:1px}
+.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.hd{position:absolute;top:44px;left:0;right:0;height:52px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border-bottom:1px solid var(--line);background:var(--surface);z-index:5}
+.hd .who{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:4px 6px;border-radius:12px}
+.hd .who b{font-size:16px;font-weight:500}
+.ib{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;color:var(--ink)}
+.ib.mute{color:var(--ink3);cursor:default}
+
+.av{display:inline-block;flex:none;line-height:0}
+.av svg{display:block}
+
+.msgs{position:absolute;top:96px;bottom:84px;left:0;right:0;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;scrollbar-width:none}
+.msgs::-webkit-scrollbar{display:none}
+.dsep{align-self:center;margin:16px 0 8px;font-size:12px;color:var(--ink2);background:var(--chip);padding:5px 12px;border-radius:999px;font-variant-numeric:tabular-nums}
+.dsep:first-child{margin-top:4px}
+.b{max-width:78%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
+.b.in{align-self:flex-start;background:var(--in);border-top-left-radius:6px}
+.b.in.serif{font-family:var(--serif);font-size:15.5px;line-height:1.7}
+.b.out{align-self:flex-end;background:var(--out);color:var(--on-out);border-top-right-radius:6px}
+.mrow{display:flex;align-items:flex-start;gap:8px;padding-left:4px}
+.mrow .spc{width:28px;flex:none}
+.mrow .b{max-width:calc(100% - 76px)}
+.rd{align-self:flex-end;font-size:11px;color:var(--ink3);margin:-2px 4px 4px}
+.typing{display:flex;align-items:flex-end;gap:8px;margin-top:10px}
+.typing .b{padding:13px 16px}
+
+.dots3{display:inline-flex;gap:4px;align-items:center;height:14px}
+.dots3 u{width:6px;height:6px;border-radius:50%;background:var(--ink2);animation:blink 1.5s infinite;display:block}
+.dots3 u:nth-child(2){animation-delay:.2s}.dots3 u:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.18}30%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.dots3 u{animation:none;opacity:.6}}
+
+.chips{position:absolute;left:0;right:0;bottom:84px;display:flex;gap:8px;padding:8px 16px 4px;overflow-x:auto;scrollbar-width:none;background:linear-gradient(to top,var(--surface) 70%,transparent);z-index:3}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font-size:13px;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.chip:hover{border-color:var(--ink3)}
+.msgs.hasChips{bottom:132px}
+
+.composer{position:absolute;left:0;right:0;bottom:0;height:84px;padding:8px 12px 0;display:flex;gap:8px;align-items:flex-start;background:var(--surface);border-top:1px solid var(--line);z-index:4}
+.composer:after{content:"";position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--ink);opacity:.85}
+.field{flex:1;height:40px;border-radius:20px;background:var(--chip);display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px;color:var(--ink3);min-width:0}
+.field input{flex:1;min-width:0;height:100%;border:0;background:none;font:inherit;font-size:15px;color:var(--ink);outline:none}
+.field input::placeholder{color:var(--ink3)}
+.composer .ib{width:40px;height:40px;color:var(--ink2)}
+.composer.locked .ib{color:var(--ink3);opacity:.6;cursor:default}
+.field .ic{width:18px;height:18px;flex:none}
+.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-5px)}45%{transform:translateX(5px)}70%{transform:translateX(-3px)}}
+
+.tabs{position:absolute;left:0;right:0;bottom:0;height:84px;display:flex;border-top:1px solid var(--line);background:var(--surface);z-index:4}
+.tabs:after{content:"";position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--ink);opacity:.85}
+.tab{flex:1;height:56px;display:grid;place-items:center;color:var(--ink3)}
+.tab.on{color:var(--ink)}
+.tab .ic{width:26px;height:26px}
+.tab.nudge .ic{animation:nudge 1.4s ease-in-out 2}
+@keyframes nudge{0%,100%{transform:scale(1)}40%{transform:scale(1.28)}}
+
+.top{position:absolute;top:44px;left:0;right:0;height:56px;padding:0 10px 0 20px;display:flex;align-items:center;justify-content:space-between}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.list{position:absolute;top:100px;bottom:84px;left:0;right:0;overflow-y:auto;scrollbar-width:none}
+.row{width:100%;display:flex;align-items:center;gap:14px;padding:12px 20px;min-height:72px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row:hover{background:var(--chip)}
+.row.static{cursor:default}
+.row.static:hover{background:none}
+.rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rt b{font-size:16px;font-weight:500}
+.pv{font-size:13.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px;display:flex;align-items:center}
+.rm{align-self:flex-start;margin-top:6px;font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.sec{padding:14px 20px 6px;font-size:12.5px;color:var(--ink3)}
+.avw{position:relative;display:inline-block;line-height:0}
+.reddot{position:absolute;top:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:var(--dot);border:2px solid var(--surface);box-sizing:content-box;transition:transform .3s,opacity .3s}
+.reddot.gone{transform:scale(0);opacity:0}
+
+.pp{position:absolute;top:96px;bottom:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;padding:56px 24px 0}
+.pp .nm{margin-top:18px;font-size:22px;font-weight:500}
+.pp .st{margin-top:6px;height:20px;color:var(--ink3);font-size:14px}
+.pp .acts{margin-top:30px;display:flex;gap:12px;width:100%}
+.btn{flex:1;height:46px;border-radius:14px;border:1px solid var(--line);font-size:15px;font-weight:500;display:grid;place-items:center}
+.btn:hover{background:var(--chip)}
+.mutual{margin-top:26px;width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:var(--chip)}
+.mutual .stack{display:flex}
+.mutual .stack .av+.av{margin-left:-8px}
+.mutual .av svg{box-shadow:0 0 0 2px var(--chip);border-radius:12px}
+.mutual .tx{flex:1;min-width:0;font-size:14px;line-height:1.45}
+.mutual .tx small{display:block;color:var(--ink2);font-size:12.5px}
+
+.tri{position:absolute;top:96px;bottom:0;left:0;right:0;display:flex;flex-direction:column}
+.tri svg.g{width:100%;height:auto;flex:none}
+.tri .cap{margin:0 24px;min-height:84px;padding-top:6px;font-size:15px;line-height:1.6;color:var(--ink);word-break:keep-all;text-align:center}
+.tri .cap b{display:block;font-size:13px;font-weight:500;color:var(--ink2);margin-bottom:2px}
+.node{cursor:pointer}
+.node circle.nb{fill:var(--av-bg);stroke:var(--ink3);stroke-width:1.2}
+.node.sel circle.nb{stroke:var(--ink);stroke-width:2}
+.node .nl{font:500 14px var(--sans);fill:var(--ink);text-anchor:middle}
+.node .ns{font:400 12px var(--sans);fill:var(--ink2);text-anchor:middle}
+.el{font:400 12px var(--sans);fill:var(--ink2)}
+.av-s{stroke:var(--av-ink);fill:none;stroke-width:2;stroke-linecap:round}
+.av-f{fill:var(--av-ink)}
+.edge{fill:none;stroke-linecap:round}
+.play .draw{animation:draw 1.2s cubic-bezier(.3,.7,.2,1) both}
+.play .draw.d2{animation-delay:.5s}
+.play .draw.d3{animation-delay:.9s}
+.play .fadeIn{animation:fin .8s 1.3s both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes fin{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.play .draw,.play .fadeIn{animation:none}}
+
+.lock{background:#0D0E10;color:#F2F2F0;overflow:hidden;touch-action:none}
+.screen[data-pos="up"]{transform:translateY(-100%)}
+.lk-bar{position:absolute;left:50%;bottom:0;width:220px;height:44px;margin-left:-110px;display:grid;place-items:center;z-index:3}
+.lk-bar i{display:block;width:134px;height:5px;border-radius:3px;background:#F2F2F0;opacity:.85;animation:bob 2.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media (prefers-reduced-motion:reduce){.lk-bar i{animation:none}}
+.lk-date{position:absolute;top:92px;left:0;right:0;text-align:center;font-size:17px;font-weight:500;opacity:.85}
+.lk-time{position:absolute;top:116px;left:0;right:0;text-align:center;font-size:96px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.notifs{position:absolute;left:12px;right:12px;top:318px;display:flex;flex-direction:column;gap:8px}
+.nt{display:block;width:100%;background:#26272B;border-radius:22px;padding:13px 16px 14px;animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.nt:nth-child(2){animation-delay:.1s}.nt:nth-child(3){animation-delay:.2s}
+.nt:hover{background:#2D2F34}
+@keyframes rise{from{transform:translateY(18px)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.nt{animation:none}}
+.nt .top2{display:flex;align-items:center;gap:7px;font-size:12px;color:#A3A5AB;margin-bottom:6px}
+.nt .app{width:18px;height:18px;border-radius:5px;background:#F2F2F0;display:grid;place-items:center}
+.nt .app i{display:block;width:8px;height:2px;background:#0D0E10;border-radius:1px;box-shadow:0 -3.5px 0 #0D0E10,0 3.5px 0 #0D0E10}
+.nt .top2 .tm{margin-left:auto;font-variant-numeric:tabular-nums}
+.nt b{display:block;font-size:15px;font-weight:500;margin-bottom:2px}
+.nt p{margin:0;font-size:14.5px;line-height:1.5;color:#D6D7DA;word-break:keep-all}
+.lk-more{position:absolute;left:0;right:0;top:696px;text-align:center;font-size:13px;color:#7B7D83}
+
+.mun{background:#240D0E;overflow:hidden}
+.cover{position:absolute;left:0;right:0;top:0;height:654px;overflow:hidden;touch-action:none;cursor:crosshair}
+.paper{position:absolute;inset:0;background:#F1E6DF}
+#bleed,#mtext{position:absolute;inset:0;width:100%;height:100%;display:block}
+#mtext{pointer-events:none}
+.mclose{position:absolute;top:52px;left:14px;width:38px;height:38px;border-radius:50%;background:rgba(20,6,6,.32);color:#F6EDE4;display:grid;place-items:center;z-index:7}
+.mpanel{position:absolute;left:0;right:0;bottom:0;height:190px;background:#240D0E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.mpanel .nm{font-size:20px;font-weight:500;color:#F6EDE4}
+.mpanel .av-s{stroke:#C9B6AC}
+.mpanel .av-f{fill:#C9B6AC}
+</style>
+
+<div class="stage" id="stage">
+<div class="scaler" id="scaler">
+<div class="phone" id="phone">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-7-5 15-3-6.5L4 12z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-friends" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5.5h14a1 1 0 011 1v8.5a1 1 0 01-1 1h-7l-4.2 3.5V16H5a1 1 0 01-1-1V6.5a1 1 0 011-1z"/></symbol>
+</svg>
+
+<!-- 잠금화면 -->
+<section class="screen lock" id="s-lock" data-pos="center" aria-label="잠금화면">
+  <div class="sb light"><span class="clock"></span><span class="bat"></span></div>
+  <div class="lk-date" id="lk-date"></div>
+  <div class="lk-time" id="lk-time"></div>
+  <div class="notifs" id="notifs"></div>
+  <div class="lk-more">이전 알림 8개</div>
+  <button class="lk-bar" data-go="list" data-mode="up" aria-label="위로 밀어 열기"><i></i></button>
+</section>
+
+<!-- 베르테르 방 -->
+<section class="screen" id="s-werther" data-pos="right" aria-label="베르테르와의 대화">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="list" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <button class="who" data-go="wprofile" aria-label="베르테르의 프로필 보기"><span class="av" data-av="werther" data-size="32"></span><b>베르테르</b></button>
+    <span class="ib mute"><svg class="ic" style="fill:currentColor;stroke:none"><use href="#i-dots"/></svg></span>
+  </header>
+  <div class="msgs" id="w-msgs"></div>
+  <div class="composer locked" id="w-comp">
+    <span class="ib"><svg class="ic"><use href="#i-plus"/></svg></span>
+    <div class="field" id="w-field"><svg class="ic"><use href="#i-lock"/></svg>답장할 수 없는 대화입니다</div>
+    <span class="ib"><svg class="ic"><use href="#i-send"/></svg></span>
+  </div>
+</section>
+
+<!-- 채팅 목록 -->
+<section class="screen" id="s-list" data-pos="right" aria-label="채팅 목록">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <div class="top"><h1>채팅</h1><span class="ib mute"><svg class="ic" style="fill:currentColor;stroke:none"><use href="#i-dots"/></svg></span></div>
+  <div class="list">
+    <button class="row" data-go="werther">
+      <span class="av" data-av="werther" data-size="48"></span>
+      <span class="rt"><b>베르테르</b><span class="pv">빌헬름, 답장은 이제 바라지 않네.</span></span>
+      <span class="rm">1772.12.20</span>
+    </button>
+    <button class="row" data-go="paul">
+      <span class="av" data-av="paul" data-size="48"></span>
+      <span class="rt"><b>폴</b><span class="pv"><i class="dots3"><u></u><u></u><u></u></i></span></span>
+      <span class="rm">1961.10.12</span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="탭">
+    <button class="tab" id="tab-friends-l" data-go="friends" data-mode="fade" aria-label="친구"><svg class="ic"><use href="#i-friends"/></svg></button>
+    <button class="tab on" aria-label="채팅" aria-current="page"><svg class="ic"><use href="#i-chat"/></svg></button>
+  </nav>
+</section>
+
+<!-- 폴 방 -->
+<section class="screen" id="s-paul" data-pos="right" aria-label="폴과의 대화">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="list" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <button class="who" data-go="paulprofile" aria-label="폴의 프로필 보기"><span class="av" data-av="paul" data-size="32"></span><b>폴</b></button>
+    <span class="ib mute"><svg class="ic" style="fill:currentColor;stroke:none"><use href="#i-dots"/></svg></span>
+  </header>
+  <div class="msgs hasChips" id="p-msgs"></div>
+  <div class="chips" id="p-chips"></div>
+  <form class="composer" id="p-comp" autocomplete="off">
+    <span class="ib"><svg class="ic"><use href="#i-plus"/></svg></span>
+    <div class="field" id="p-field"><input id="p-input" type="text" placeholder="메시지 입력" aria-label="메시지 입력"></div>
+    <button class="ib" type="submit" aria-label="보내기"><svg class="ic"><use href="#i-send"/></svg></button>
+  </form>
+</section>
+
+<!-- 폴 프로필 -->
+<section class="screen" id="s-paulprofile" data-pos="right" aria-label="폴의 프로필">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="paul" data-back="paulprofile" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div class="who"><b>프로필</b></div>
+  </header>
+  <div class="pp">
+    <span class="av" data-av="paul" data-size="104"></span>
+    <div class="nm">폴</div>
+    <div class="st"></div>
+    <div class="acts"><button class="btn" data-go="paul" data-mode="back">대화하기</button></div>
+    <button class="mutual" id="mutual" data-go="triangle" aria-label="함께 아는 친구 보기">
+      <span class="stack"><span class="av" data-av="rose" data-size="40"></span><span class="av" data-av="simon" data-size="40"></span></span>
+      <span class="tx">함께 아는 친구 2명<small>로제 · 시몽</small></span>
+      <svg class="ic" style="transform:rotate(180deg);color:var(--ink3)"><use href="#i-back"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- 삼각구도 -->
+<section class="screen" id="s-triangle" data-pos="right" aria-label="폴, 로제, 시몽의 관계">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="paulprofile" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div class="who"><b>함께 아는 친구</b></div>
+  </header>
+  <div class="tri" id="tri">
+    <svg class="g" viewBox="0 0 390 560" role="img" aria-label="폴을 꼭짓점으로 로제와 시몽이 이어진 삼각형">
+      <defs>
+        <mask id="mkL" maskUnits="userSpaceOnUse" x="0" y="0" width="390" height="560">
+          <line class="draw" x1="195" y1="170" x2="82" y2="410" stroke="#fff" stroke-width="10" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        </mask>
+      </defs>
+      <line class="edge" x1="82" y1="410" x2="308" y2="410" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="2 7" opacity=".55"/>
+      <line class="edge" x1="195" y1="170" x2="82" y2="410" stroke="var(--ink2)" stroke-width="2" stroke-dasharray="16 6 11 10 7 16 4 22 3 40" mask="url(#mkL)"/>
+      <line class="edge draw d2" x1="195" y1="170" x2="308" y2="410" stroke="var(--ink)" stroke-width="2.4" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+      <g class="fadeIn">
+        <text class="el" x="108" y="289" text-anchor="end">오랜 연인</text>
+        <text class="el" x="284" y="280">다가오는 중</text>
+        <text class="el" x="284" y="298" style="font-size:11px">(이루어질 수 없음)</text>
+      </g>
+      <g class="node" id="n-paul" data-who="paul" transform="translate(195 170)" tabindex="0" role="button" aria-label="폴"></g>
+      <g class="node" id="n-rose" data-who="rose" transform="translate(82 410)" tabindex="0" role="button" aria-label="로제"></g>
+      <g class="node" id="n-simon" data-who="simon" transform="translate(308 410)" tabindex="0" role="button" aria-label="시몽"></g>
+    </svg>
+    <div class="cap" id="tri-cap" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 베르테르 프로필 -->
+<section class="screen" id="s-wprofile" data-pos="right" aria-label="베르테르의 프로필">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="werther" data-back="wprofile" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div class="who"><b>프로필</b></div>
+  </header>
+  <div class="pp">
+    <span class="av" data-av="werther" data-size="104"></span>
+    <div class="nm">베르테르</div>
+    <div class="st"></div>
+    <div class="acts"><button class="btn" data-go="werther" data-mode="back">대화하기</button></div>
+    <button class="mutual" data-go="wtriangle" aria-label="함께 아는 친구 보기">
+      <span class="stack"><span class="av" data-av="lotte" data-size="40"></span><span class="av" data-av="albert" data-size="40"></span></span>
+      <span class="tx">함께 아는 친구 2명<small>로테 · 알베르트</small></span>
+      <svg class="ic" style="transform:rotate(180deg);color:var(--ink3)"><use href="#i-back"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- 베르테르 관계도 -->
+<section class="screen" id="s-wtriangle" data-pos="right" aria-label="베르테르, 로테, 알베르트, 빌헬름의 관계">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <header class="hd">
+    <button class="ib" data-go="wprofile" data-mode="back" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div class="who"><b>함께 아는 친구</b></div>
+  </header>
+  <div class="tri" id="wtri">
+    <svg class="g" viewBox="0 0 390 560" role="img" aria-label="베르테르를 꼭짓점으로 알베르트와 로테가 이어진 삼각형, 그리고 편지를 받는 빌헬름">
+      <line class="edge draw d3" x1="82" y1="410" x2="308" y2="410" stroke="var(--ink2)" stroke-width="5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+      <defs>
+        <mask id="mkA" maskUnits="userSpaceOnUse" x="0" y="0" width="390" height="560">
+          <line class="draw" x1="195" y1="170" x2="82" y2="410" stroke="#fff" stroke-width="10" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        </mask>
+      </defs>
+      <line class="edge" x1="195" y1="170" x2="82" y2="410" stroke="var(--ink2)" stroke-width="2" stroke-dasharray="16 6 11 10 7 16 4 22 3 40" mask="url(#mkA)"/>
+      <line class="edge draw d2" x1="195" y1="170" x2="308" y2="410" stroke="var(--ink)" stroke-width="2.4" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+      <line class="edge fadeIn" x1="68" y1="110" x2="195" y2="170" stroke="var(--ink3)" stroke-width="1.6" stroke-dasharray="3 7"/>
+      <g class="fadeIn">
+        <text class="el" x="106" y="280" text-anchor="end">좋은 사람</text>
+        <text class="el" x="106" y="298" text-anchor="end" style="font-size:11px">(미워할 수 없음)</text>
+        <text class="el" x="284" y="280">짝사랑</text>
+        <text class="el" x="284" y="298" style="font-size:11px">(이루어질 수 없음)</text>
+        <text class="el" x="195" y="388" text-anchor="middle">약혼한 사이</text>
+        <text class="el" x="134" y="96">편지</text>
+        <text class="el" x="134" y="112" style="font-size:11px">(답장 없음)</text>
+      </g>
+      <g class="node" data-who="wilhelm" transform="translate(68 110)" tabindex="0" role="button" aria-label="빌헬름 (나)"></g>
+      <g class="node" data-who="werther" transform="translate(195 170)" tabindex="0" role="button" aria-label="베르테르"></g>
+      <g class="node" data-who="albert" transform="translate(82 410)" tabindex="0" role="button" aria-label="알베르트"></g>
+      <g class="node" data-who="lotte" transform="translate(308 410)" tabindex="0" role="button" aria-label="로테"></g>
+    </svg>
+    <div class="cap" id="wtri-cap" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 친구 목록 -->
+<section class="screen" id="s-friends" data-pos="right" aria-label="친구 목록">
+  <div class="sb"><span class="clock"></span><span class="bat"></span></div>
+  <div class="top"><h1>친구</h1><span class="ib mute"><svg class="ic" style="fill:currentColor;stroke:none"><use href="#i-dots"/></svg></span></div>
+  <div class="list">
+    <div class="sec">내 프로필</div>
+    <div class="row static"><span class="av" data-av="me" data-size="48"></span><span class="rt"><b>나</b></span></div>
+    <div class="sec">친구 6</div>
+    <button class="row" data-go="wprofile"><span class="av" data-av="werther" data-size="48"></span><span class="rt"><b>베르테르</b></span></button>
+    <button class="row" data-go="paulprofile"><span class="av" data-av="paul" data-size="48"></span><span class="rt"><b>폴</b></span></button>
+    <button class="row" data-go="mun" id="row-mun"><span class="avw"><span class="av" data-av="mun" data-size="48"></span><i class="reddot" id="reddot"></i></span><span class="rt"><b>문오언</b></span></button>
+    <div class="row static"><span class="av" data-av="albert" data-size="48"></span><span class="rt"><b>알베르트</b></span></div>
+    <div class="row static"><span class="av" data-av="rose" data-size="48"></span><span class="rt"><b>로제</b></span></div>
+    <div class="row static"><span class="av" data-av="lotte" data-size="48"></span><span class="rt"><b>로테</b></span></div>
+  </div>
+  <nav class="tabs" aria-label="탭">
+    <button class="tab on" aria-label="친구" aria-current="page"><svg class="ic"><use href="#i-friends"/></svg></button>
+    <button class="tab" data-go="list" data-mode="fade" aria-label="채팅"><svg class="ic"><use href="#i-chat"/></svg></button>
+  </nav>
+</section>
+
+<!-- 문오언 프로필 -->
+<section class="screen mun" id="s-mun" data-pos="right" aria-label="문오언의 프로필">
+  <div class="sb light"><span class="clock"></span><span class="bat"></span></div>
+  <div class="cover" id="cover">
+    <div class="paper"></div>
+    <canvas id="bleed"></canvas>
+    <canvas id="mtext" width="780" height="1308"></canvas>
+  </div>
+  <button class="mclose" data-go="friends" data-mode="back" aria-label="닫기"><svg class="ic"><use href="#i-close"/></svg></button>
+  <div class="mpanel"><span class="av" data-av="mun" data-size="72"></span><div class="nm">문오언</div></div>
+</section>
+
+</div>
+</div>
+<button class="reset" id="reset" type="button">처음부터 다시</button>
+<button class="themebtn" id="themebtn" type="button">화이트 / 다크</button>
+</div>
+
+<script>
+/*BLEED_START*/
+function makeBleed(gw,gh,cfg){
+  var n=gw*gh, W=new Float32Array(n), T=new Float32Array(n), grain=new Float32Array(n);
+  var noise=new Float32Array(n), i, x, y;
+  for(i=0;i<n;i++){noise[i]=Math.random();grain[i]=Math.random();}
+  function blur(a){
+    var b=new Float32Array(n);
+    for(y=0;y<gh;y++)for(x=0;x<gw;x++){
+      var s=0,c=0;
+      for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
+        var xx=x+dx,yy=y+dy;
+        if(xx>=0&&xx<gw&&yy>=0&&yy<gh){s+=a[yy*gw+xx];c++;}
+      }
+      b[y*gw+x]=s/c;
+    }
+    return b;
+  }
+  noise=blur(blur(blur(blur(noise))));
+  var mn=1e9,mx=-1e9;
+  for(i=0;i<n;i++){if(noise[i]<mn)mn=noise[i];if(noise[i]>mx)mx=noise[i];}
+  for(i=0;i<n;i++)noise[i]=(noise[i]-mn)/(mx-mn||1);
+
+  var S={W:W,gw:gw,gh:gh,E:0,cover:0,frame:0,wet:false};
+
+  S.deposit=function(cx,cy,amt){
+    var R=cfg.brush, sg=R*0.55, r2=2*sg*sg, ext=Math.ceil(R*2);
+    var x0=Math.max(0,Math.floor(cx-ext)),x1=Math.min(gw-1,Math.ceil(cx+ext));
+    var y0=Math.max(0,Math.floor(cy-ext)),y1=Math.min(gh-1,Math.ceil(cy+ext));
+    for(var yy=y0;yy<=y1;yy++)for(var xx=x0;xx<=x1;xx++){
+      var d2=(xx-cx)*(xx-cx)+(yy-cy)*(yy-cy), v=amt*Math.exp(-d2/r2), k=yy*gw+xx;
+      W[k]=Math.min(1,W[k]+v);
+    }
+  };
+  S.stroke=function(x0,y0,x1,y1){
+    var dist=Math.hypot(x1-x0,y1-y0), step=cfg.brush*cfg.stampStep, m=Math.max(1,Math.ceil(dist/step));
+    for(var s=1;s<=m;s++){
+      var t=s/m;
+      S.deposit(x0+(x1-x0)*t,y0+(y1-y0)*t,cfg.stampAmt);
+      S.E=Math.min(cfg.Emax,S.E+cfg.eGain);
+    }
+    S.wet=true;
+  };
+  S.step=function(){
+    if(S.E<0.004){S.E=0;return false;}
+    var E=S.E, D=Math.min(0.24,cfg.diff*(E/(E+0.25))*(1+cfg.diffGain*S.cover)), r=cfg.grow*E;
+    for(y=1;y<gh-1;y++)for(x=1;x<gw-1;x++){
+      i=y*gw+x;
+      var w=W[i], lap=W[i-1]+W[i+1]+W[i-gw]+W[i+gw]-4*w;
+      var nv=w+D*lap+r*(0.55+0.9*noise[i])*w*(1-w);
+      T[i]=nv<0.00001?0:(nv>1?1:nv);
+    }
+    for(y=1;y<gh-1;y++)for(x=1;x<gw-1;x++){i=y*gw+x;W[i]=T[i];}
+    S.E*=cfg.decay;
+    return true;
+  };
+  S.measure=function(){
+    var c=0;for(i=0;i<n;i++)if(W[i]>0.45)c++;
+    S.cover=c/n;return S.cover;
+  };
+  S.avgAt=function(cx,cy,hw,hh){
+    var s=0,c=0;
+    for(var yy=Math.max(0,Math.floor(cy-hh));yy<=Math.min(gh-1,Math.ceil(cy+hh));yy+=2)
+      for(var xx=Math.max(0,Math.floor(cx-hw));xx<=Math.min(gw-1,Math.ceil(cx+hw));xx+=2){s+=W[yy*gw+xx];c++;}
+    return c?s/c:0;
+  };
+  S.reset=function(){W.fill(0);T.fill(0);S.E=0;S.cover=0;S.frame=0;S.wet=false;};
+  S.render=function(red,hole){
+    for(i=0;i<n;i++){
+      var w=W[i]+(noise[i]-0.5)*cfg.edgeNoise;
+      var t=(w-0.30)/0.32; t=t<0?0:(t>1?1:t);
+      var s=t*t*(3-2*t), a=1-s;
+      var g=0.93+0.07*grain[i];
+      var u=(w-0.04)/0.30; u=u<0?0:(u>1?1:u);
+      var dil=u*u*(3-2*u)*0.55;
+      var ring=Math.exp(-((w-0.46)*(w-0.46))/0.02), k=1-0.2*ring;
+      var j=i*4;
+      red[j]=(158*(1-dil)+224*dil)*g*k;
+      red[j+1]=(38*(1-dil)+134*dil)*g*k;
+      red[j+2]=(40*(1-dil)+124*dil)*g*k;
+      red[j+3]=a*255;
+      hole[j]=255;hole[j+1]=255;hole[j+2]=255;hole[j+3]=s*255;
+    }
+  };
+  return S;
+}
+/*BLEED_END*/
+
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+  /* ---------- 크기 맞춤 ---------- */
+  var stage=$('#stage'),scaler=$('#scaler'),phone=$('#phone');
+  function fit(){
+    var w=stage.clientWidth-32, s=w/390;
+    if(window.innerHeight>=560) s=Math.min(s,(window.innerHeight-32-48)/844);
+    s=Math.max(.45,Math.min(s,1));
+    scaler.style.width=(390*s)+'px';scaler.style.height=(844*s)+'px';
+    phone.style.transform='scale('+s+')';
+  }
+  window.addEventListener('resize',fit);fit();
+
+  /* ---------- 아바타 ---------- */
+  function shapes(kind){
+    switch(kind){
+      case 'werther':return '<path class="av-s" d="M11 14h22M11 20h22M11 26h22M11 32h12"/>';
+      case 'paul':return '<circle class="av-f" cx="13" cy="22" r="2.7"/><circle class="av-f" cx="22" cy="22" r="2.7"/><circle class="av-f" cx="31" cy="22" r="2.7"/>';
+      case 'mun':return '<path class="av-s" d="M13 31L31 13" stroke-width="2.3"/>';
+      case 'rose':return '<circle class="av-s" cx="22" cy="22" r="9"/>';
+      case 'simon':return '<rect class="av-s" x="14" y="14" width="16" height="16" rx="2"/>';
+      case 'lotte':return '<path class="av-s" d="M22 12l10 10-10 10-10-10z"/>';
+      case 'albert':return '<path class="av-s" d="M22 13l10 18H12z"/>';
+      default:return '<circle class="av-s" cx="22" cy="22" r="9"/><circle class="av-f" cx="22" cy="22" r="3"/>';
+    }
+  }
+  function avSvg(kind,size){
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="15" fill="var(--av-bg)"/>'+shapes(kind)+'</svg>';
+  }
+  function paintAvatars(root){
+    $$('[data-av]',root).forEach(function(el){
+      if(el.tagName==='g')return;
+      el.innerHTML=avSvg(el.getAttribute('data-av'),+el.getAttribute('data-size')||44);
+    });
+  }
+  paintAvatars(document);
+  $$('#s-triangle .node').forEach(function(g){
+    var who=g.getAttribute('data-who');
+    var name={paul:'폴',rose:'로제',simon:'시몽'}[who];
+    var sub={paul:'',rose:'',simon:'나'}[who];
+    g.innerHTML='<circle class="nb" r="38"/><g transform="translate(-30.8 -30.8) scale(1.4)">'+shapes(who)+'</g>'+
+      '<text class="nl" y="62">'+name+'</text>'+(sub?'<text class="ns" y="80">'+sub+'</text>':'');
+  });
+
+  /* ---------- 시계 ---------- */
+  function tick(){
+    var d=new Date(), hh=('0'+d.getHours()).slice(-2), mm=('0'+d.getMinutes()).slice(-2);
+    $$('.clock').forEach(function(c){c.textContent=hh+':'+mm});
+    $('#lk-time').textContent=hh+':'+mm;
+    $('#lk-date').textContent=d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
+  }
+  tick();setInterval(tick,20000);
+
+  /* ---------- 데이터 ---------- */
+  var notes=[
+    {t:'1772.12.20',m:'빌헬름, 답장은 이제 바라지 않네.'},
+    {t:'1771.8.30',m:'알베르트가 돌아왔네. 좋은 사람이야. 그래서 더 괴롭네.'},
+    {t:'1771.5.4',m:'빌헬름, 나는 떠나왔네. 이곳은 참 좋은 곳이야.'}
+  ];
+  $('#notifs').innerHTML=notes.map(function(n){
+    return '<button class="nt" data-go="werther" data-mode="fade"><span class="top2"><span class="app"><i></i></span>읽음<span class="tm">'+n.t+'</span></span><b>베르테르</b><p>'+n.m+'</p></button>';
+  }).join('');
+
+  var letters=[
+    {d:'1771년 5월 4일',m:['빌헬름, 나는 떠나왔네. 이곳은 참 좋은 곳이야.','자네와 떨어져 있는 일이 이렇게 기쁠 줄은 몰랐네.']},
+    {d:'1771년 5월 10일',m:['골짜기를 걸으며 하루를 다 보냈네. 마음이 한결 가볍네.']},
+    {d:'1771년 6월 16일',m:['오늘 무도회에서 로테라는 사람을 만났네.','자네에게 그 사람 이야기를 해야 할 것 같아.','춤을 추는 동안 시간이 멈춘 줄 알았네.']},
+    {d:'1771년 6월 19일',m:['하루에도 몇 번씩 그 집 쪽으로 걷고 있는 나를 발견하네.','빌헬름, 이게 사랑이라는 걸 이제 부정하지 않겠네.']},
+    {d:'1771년 7월 1일',m:['로테에게는 약혼한 사람이 있다네. 지금은 먼 곳에 가 있고.','알고도 이러는 내가 한심하지만, 마음이 말을 듣지 않네.']},
+    {d:'1771년 7월 26일',m:['그 사람이 웃으면 하루가 환해지고, 그 사람이 다른 사람에게 웃으면 하루가 어두워지네.','나는 이렇게 작은 일에 매달리는 사람이 아니었는데.']},
+    {d:'1771년 8월 30일',m:['알베르트가 돌아왔네. 좋은 사람이야.','그래서 더 괴롭네.','그가 로테의 손을 잡는 걸 보며 웃어야 했네.']},
+    {d:'1771년 9월 15일',m:['사랑한다는 말은 한 번도 하지 못했네.','해서는 안 되는 말이라는 걸 알기 때문이지.','차라리 그를 미워할 수 있으면 좋겠네.']},
+    {d:'1771년 10월 20일',m:['떠나야 한다는 걸 알고 있네. 오늘도 그 집 앞까지 갔다가 돌아왔네.']},
+    {d:'1772년 2월 8일',m:['일이 손에 잡히지 않네. 무엇을 해도 로테의 얼굴이 먼저 떠오르네.','나는 어디에도 마음 둘 곳이 없네.']},
+    {d:'1772년 11월 24일',m:['그 사람은 나를 좋은 친구라고 부르네.','그 말이 내게 어떤 말인지, 그 사람은 끝내 모를 걸세.']},
+    {d:'1772년 12월 20일',m:['로테가 없는 날들이 어떤 모양일지 상상이 되지 않네.','빌헬름,','답장은 이제 바라지 않네.']}
+  ];
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+  var wm=$('#w-msgs');
+  letters.forEach(function(L){
+    wm.appendChild(el('div','dsep',L.d));
+    L.m.forEach(function(t,k){
+      var row=el('div','mrow');
+      if(k===0){var a=el('span','av');a.setAttribute('data-av','werther');a.setAttribute('data-size','28');row.appendChild(a);}
+      else row.appendChild(el('span','spc'));
+      row.appendChild(el('div','b in serif',t));
+      wm.appendChild(row);
+    });
+  });
+  paintAvatars(wm);
+
+  /* ---------- 폴 방 ---------- */
+  var pm=$('#p-msgs'),typing;
+  function buildPaul(){
+    pm.innerHTML='';
+    pm.appendChild(el('div','dsep','1961년 10월 12일'));
+    ['브람스를 좋아하세요?','일요일 저녁에 연주회가 있어요.','당신이 오면 좋겠어요.','저는 스물다섯이고, 당신은 저를 어리다고 하시겠죠.'].forEach(function(t){pm.appendChild(el('div','b out',t));});
+    pm.appendChild(el('div','rd','읽음'));
+    typing=el('div','typing');
+    typing.innerHTML='<span class="av" data-av="paul" data-size="28"></span><div class="b in"><i class="dots3"><u></u><u></u><u></u></i></div>';
+    pm.appendChild(typing);paintAvatars(typing);
+  }
+  buildPaul();
+  $('#p-chips').innerHTML=['대답해 주세요','당신이 보고 싶어요','그 사람은 당신을 아끼지 않잖아요'].map(function(t){return '<button type="button" class="chip">'+t+'</button>'}).join('');
+  function toBottom(){pm.scrollTop=pm.scrollHeight;}
+  var typingTimer;
+  function sendPaul(text){
+    text=(text||'').trim();
+    if(!text){var f=$('#p-field');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');return;}
+    $$('.rd',pm).forEach(function(r){r.remove();});
+    var b=el('div','b out',text);
+    pm.insertBefore(b,typing);
+    typing.hidden=true;
+    toBottom();
+    setTimeout(function(){
+      var r=el('div','rd','읽음');
+      if(b.parentNode===pm){pm.insertBefore(r,typing);toBottom();}
+    },500);
+    clearTimeout(typingTimer);
+    typingTimer=setTimeout(function(){typing.hidden=false;toBottom();},1300);
+  }
+  $('#p-comp').addEventListener('submit',function(e){e.preventDefault();var inp=$('#p-input');var v=inp.value;sendPaul(v);if(v.trim())inp.value='';});
+  $('#p-chips').addEventListener('click',function(e){var c=e.target.closest('.chip');if(c)sendPaul(c.textContent);});
+  $('#w-comp').addEventListener('click',function(){var f=$('#w-field');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');});
+
+  /* ---------- 삼각구도 ---------- */
+  var caps={
+    paul:['폴','39세. 오랜 연인 로제와 젊은 시몽 사이에서 마음이 흔들린다.'],
+    rose:['로제','폴의 오랜 연인. 곁에 있지만 폴을 오래 혼자 두었다.'],
+    simon:['시몽 (나)','25세. 폴에게 다가간다. 그리고 지금 이 화면의 나.']
+  };
+  function selectNode(who){
+    $$('#s-triangle .node').forEach(function(n){n.classList.toggle('sel',n.getAttribute('data-who')===who);});
+    var c=caps[who];$('#tri-cap').innerHTML='<b>'+c[0]+'</b>'+c[1];
+  }
+  $$('#s-triangle .node').forEach(function(n){
+    n.addEventListener('click',function(){selectNode(n.getAttribute('data-who'));});
+    n.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectNode(n.getAttribute('data-who'));}});
+  });
+  selectNode('paul');
+
+  /* ---------- 베르테르 관계도 ---------- */
+  var wnames={werther:'베르테르',lotte:'로테',albert:'알베르트',wilhelm:'빌헬름'};
+  $$('#s-wtriangle .node').forEach(function(g){
+    var who=g.getAttribute('data-who');
+    g.innerHTML='<circle class="nb" r="38"/><g transform="translate(-30.8 -30.8) scale(1.4)">'+shapes(who==='wilhelm'?'me':who)+'</g>'+
+      (who==='werther'?'<text class="nl" x="48" y="5" style="text-anchor:start">'+wnames[who]+'</text>':'<text class="nl" y="62">'+wnames[who]+'</text>')+(who==='wilhelm'?'<text class="ns" y="80">나</text>':'');
+  });
+  var wcaps={
+    werther:['베르테르','젊은 청년. 로테를 사랑하게 되어, 친구 빌헬름에게 편지를 쓴다.'],
+    lotte:['로테','19세. 동생들을 돌보며 사는 사람. 알베르트와 약혼한 사이이고, 베르테르를 좋은 친구로 대한다.'],
+    albert:['알베르트','로테의 약혼자. 성실하고 좋은 사람이라 베르테르는 그를 미워하지 못한다.'],
+    wilhelm:['빌헬름 (나)','베르테르의 친구. 편지를 받는 사람이고, 지금 이 화면의 나.']
+  };
+  function wSelect(who){
+    $$('#s-wtriangle .node').forEach(function(n){n.classList.toggle('sel',n.getAttribute('data-who')===who);});
+    var c=wcaps[who];$('#wtri-cap').innerHTML='<b>'+c[0]+'</b>'+c[1];
+  }
+  $$('#s-wtriangle .node').forEach(function(n){
+    n.addEventListener('click',function(){wSelect(n.getAttribute('data-who'));});
+    n.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();wSelect(n.getAttribute('data-who'));}});
+  });
+  wSelect('werther');
+
+  /* ---------- 번짐 ---------- */
+  var cfg={gw:180,brush:9,stampAmt:0.8,stampStep:0.45,diff:0.12,diffGain:1.2,grow:0.045,Emax:3,eGain:0.14,decay:0.93,edgeNoise:0.34};
+  var CW=390,CH=654,gw=cfg.gw,gh=Math.round(gw*CH/CW);
+  var B=makeBleed(gw,gh,cfg);
+  var bleedCv=$('#bleed');bleedCv.width=gw;bleedCv.height=gh;
+  var bctx=bleedCv.getContext('2d');
+  var holeCv=document.createElement('canvas');holeCv.width=gw;holeCv.height=gh;
+  var hctx=holeCv.getContext('2d');
+  var redImg=bctx.createImageData(gw,gh),holeImg=hctx.createImageData(gw,gh);
+  var tcv=$('#mtext'),tctx=tcv.getContext('2d');
+  var qcv=document.createElement('canvas');qcv.width=780;qcv.height=1308;var qctx=qcv.getContext('2d');
+  var LINE='상처는 사랑의 누룩이다';
+  var reveal=0,revealTarget=0,dimS=0,dirty=true,running=false,touched=false;
+  function drawLine(c,color){
+    c.save();c.setTransform(2,0,0,2,0,0);
+    c.font='500 27px "Noto Serif KR","Nanum Myeongjo","Apple Myungjo",serif';
+    c.textAlign='center';c.textBaseline='middle';
+    if('letterSpacing' in c)c.letterSpacing='1px';
+    c.fillStyle=color;c.fillText(LINE,CW/2+0.5,CH/2);
+    c.restore();
+  }
+  function paint(){
+    B.render(redImg.data,holeImg.data);
+    bctx.putImageData(redImg,0,0);hctx.putImageData(holeImg,0,0);
+    tctx.save();tctx.setTransform(1,0,0,1,0,0);tctx.globalCompositeOperation='source-over';tctx.clearRect(0,0,780,1308);
+    drawLine(tctx,'#3A1214');
+    tctx.globalCompositeOperation='destination-in';tctx.imageSmoothingEnabled=true;tctx.imageSmoothingQuality='high';
+    tctx.drawImage(holeCv,0,0,gw,gh,0,0,780,1308);
+    qctx.save();qctx.setTransform(1,0,0,1,0,0);qctx.globalCompositeOperation='source-over';qctx.clearRect(0,0,780,1308);
+    drawLine(qctx,'#F6EDE4');
+    qctx.globalCompositeOperation='destination-in';qctx.imageSmoothingEnabled=true;qctx.imageSmoothingQuality='high';
+    qctx.drawImage(bleedCv,0,0,gw,gh,0,0,780,1308);qctx.restore();
+    tctx.globalCompositeOperation='source-over';tctx.drawImage(qcv,0,0);
+    tctx.restore();
+  }
+  function loop(){
+    if(!running)return;
+    var moved=B.step();
+    B.frame++;
+    if(B.frame%6===0)B.measure();
+    var dimT=(function(){var t=(B.cover-0.72)/0.18;t=t<0?0:t>1?1:t;return t*t*(3-2*t);})();
+    dimS+=(dimT-dimS)*0.08;
+    reveal+=(revealTarget-reveal)*0.04;
+    if(moved||B.wet||Math.abs(dimT-dimS)>0.002||Math.abs(revealTarget-reveal)>0.002||dirty){
+      paint();
+      tcv.style.opacity=(reveal*(1-0.55*dimS)).toFixed(3);
+      tcv.style.filter=dimS>0.01?'blur('+(1.2*dimS).toFixed(2)+'px)':'none';
+      dirty=false;
+      if(!moved&&B.E===0)B.wet=false;
+    }
+    requestAnimationFrame(loop);
+  }
+  function startLoop(){if(running)return;running=true;dirty=true;requestAnimationFrame(loop);}
+  function stopLoop(){running=false;}
+  var cover=$('#cover'),last=null;
+  function pt(e){var r=cover.getBoundingClientRect();return [(e.clientX-r.left)/r.width*gw,(e.clientY-r.top)/r.height*gh];}
+  cover.addEventListener('pointerdown',function(e){
+    cover.setPointerCapture(e.pointerId);
+    last=pt(e);touched=true;revealTarget=1;
+    B.stroke(last[0],last[1],last[0],last[1]);
+  });
+  cover.addEventListener('pointermove',function(e){
+    if(!last)return;
+    var p=pt(e);B.stroke(last[0],last[1],p[0],p[1]);last=p;
+  });
+  function up(){last=null;}
+  cover.addEventListener('pointerup',up);cover.addEventListener('pointercancel',up);
+  if(document.fonts&&document.fonts.load){document.fonts.load('500 27px "Noto Serif KR"').then(function(){dirty=true;});}
+
+  /* ---------- 화면 이동 ---------- */
+  var cur='lock',nudged=false,seenTri=false,dotCleared=false;
+  var screens={};
+  ['lock','werther','wprofile','wtriangle','list','paul','paulprofile','triangle','friends','mun'].forEach(function(id){screens[id]=$('#s-'+id);});
+  function onEnter(id){
+    if(id==='werther'){wm.scrollTop=wm.scrollHeight;}
+    if(id==='paul'){setTimeout(toBottom,60);}
+    if(id==='triangle'){
+      var t=$('#tri');t.classList.remove('play');void t.offsetWidth;t.classList.add('play');seenTri=true;selectNode('paul');
+    }
+    if(id==='wtriangle'){
+      var wt=$('#wtri');wt.classList.remove('play');void wt.offsetWidth;wt.classList.add('play');wSelect('werther');
+    }
+    if(id==='list'&&seenTri&&!nudged){
+      nudged=true;var tb=$('#tab-friends-l');tb.classList.remove('nudge');void tb.offsetWidth;setTimeout(function(){tb.classList.add('nudge');},500);
+    }
+    if(id==='mun'){startLoop();}
+  }
+  function resetMun(){
+    B.reset();touched=false;reveal=0;revealTarget=0;dimS=0;dirty=true;
+    tcv.style.opacity=0;tcv.style.filter='none';paint();
+  }
+  function resetPaul(){
+    clearTimeout(typingTimer);buildPaul();$('#p-input').value='';
+  }
+  function onLeave(id,to){
+    if(id==='mun'){
+      B.measure();
+      setTimeout(function(){if(cur!=='mun'){stopLoop();resetMun();}},520);
+    }
+    if(id==='paul'&&to!=='paulprofile'){
+      setTimeout(function(){if(cur!=='paul'&&cur!=='paulprofile')resetPaul();},520);
+    }
+  }
+  var profFrom={};
+  function go(to,mode){
+    if(to===cur||!screens[to])return;
+    var from0=cur;
+    var a=screens[cur],b=screens[to];
+    mode=mode||'forward';
+    if(mode==='up'){
+      b.style.transition='none';b.dataset.pos='center';void b.offsetWidth;b.style.transition='';
+      a.style.zIndex=20;a.dataset.pos='up';
+      setTimeout(function(){a.style.zIndex='';},520);
+    }else{
+      b.style.transition='none';
+      b.dataset.pos=mode==='back'?'left':(mode==='fade'?'out':'right');
+      void b.offsetWidth;b.style.transition='';
+      b.dataset.pos='center';
+      a.dataset.pos=mode==='back'?'right':(mode==='fade'?'out':'left');
+    }
+    if((to==='wprofile'||to==='paulprofile')&&from0!=='triangle'&&from0!=='wtriangle')profFrom[to]=from0;
+    var from=cur;cur=to;onLeave(from,to);onEnter(to);
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-go]');if(!t)return;
+    var to=t.getAttribute('data-go');if(!screens[to])return;
+    var bk=t.getAttribute('data-back');if(bk&&profFrom[bk])to=profFrom[bk];
+    go(to,t.getAttribute('data-mode')||'forward');
+  });
+
+  /* ---------- 잠금화면 위로 밀기 ---------- */
+  var lockEl=$('#s-lock'),sw=null,suppress=false;
+  document.addEventListener('pointerdown',function(){suppress=false;},true);
+  document.addEventListener('click',function(e){if(suppress){suppress=false;e.stopPropagation();e.preventDefault();}},true);
+  lockEl.addEventListener('pointerdown',function(e){sw={x:e.clientX,y:e.clientY};});
+  lockEl.addEventListener('pointermove',function(e){
+    if(!sw||cur!=='lock')return;
+    var k=phone.getBoundingClientRect().width/390,dx=e.clientX-sw.x,dy=e.clientY-sw.y;
+    if(dy<-60*k&&Math.abs(dy)>Math.abs(dx)){sw=null;suppress=true;go('list','up');}
+  });
+  lockEl.addEventListener('pointerup',function(){sw=null;});
+  lockEl.addEventListener('pointercancel',function(){sw=null;});
+
+  /* ---------- 처음부터 ---------- */
+  $('#themebtn').addEventListener('click',function(){
+    var r=document.documentElement,dark=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':window.matchMedia('(prefers-color-scheme:dark)').matches;
+    r.setAttribute('data-theme',dark?'light':'dark');
+  });
+  $('#reset').addEventListener('click',function(){
+    B.reset();touched=false;reveal=0;revealTarget=0;dimS=0;dirty=true;
+    tcv.style.opacity=0;tcv.style.filter='none';
+    dotCleared=false;nudged=false;seenTri=false;
+    $('#reddot').classList.remove('gone');$('#tab-friends-l').classList.remove('nudge');
+    clearTimeout(typingTimer);buildPaul();
+    if(cur==='mun'){paint();}else{paint();}
+    go('lock','fade');
+  });
+  tcv.style.opacity=0;
+  paint();
+})();
+</script>
