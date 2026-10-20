@@ -154,7 +154,9 @@ button,input,.chip,.cover{touch-action:manipulation}
 
 .tri{position:absolute;top:96px;bottom:0;left:0;right:0;display:flex;flex-direction:column}
 .tri svg.g{width:100%;height:auto;flex:none}
-.tri .cap{margin:0 24px;min-height:84px;padding-top:6px;font-size:17px;line-height:1.6;color:var(--ink);word-break:keep-all;text-align:center}
+.stage.full .tri svg.g{height:auto;flex:1 1 0;min-height:0}
+.stage.full .tri .cap{padding-bottom:28px}
+.tri .cap{flex:none;margin:0 24px;min-height:84px;padding-top:6px;font-size:17px;line-height:1.6;color:var(--ink);word-break:keep-all;text-align:center}
 .tri .cap b{display:block;font-size:14px;font-weight:500;color:var(--ink2);margin-bottom:2px}
 .node{cursor:pointer}
 .node circle.nb{fill:var(--av-bg);stroke:var(--ink3);stroke-width:1.2}
