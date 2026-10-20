@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>읽음</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,6 +46,9 @@ html.full,html.full body{overflow:hidden;overscroll-behavior:none}
 .stage.full .lk-more{top:auto;bottom:64px}
 .stage.full .mpanel{gap:8px}
 @media (max-height:640px){.stage.full .lock .nt:nth-of-type(n+3){display:none}.stage.full .lk-time{transform:scale(.8);transform-origin:top center}}
+html.kb .themebtn{display:none}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,input,.chip,.cover{touch-action:manipulation}
 @media (max-height:780px){.stage.full .lk-more{display:none}.stage.full .mpanel{top:auto;bottom:0;height:104px}}
 @media (max-height:819px){.stage.full .mpanel{gap:2px}.stage.full .mpanel .av{transform:scale(.78);margin:-8px 0}}
 .stage.full ~ .themebtn,html.full .themebtn{top:calc(env(safe-area-inset-top,0px) + 6px);right:12px;font-size:13px;padding:6px 12px;background:transparent;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -538,7 +541,10 @@ function makeBleed(gw,gh,cfg){
       if(Math.abs(s-1)<.03)s=1;      /* avoid fractional scaling (hairline seams on iOS) */
       var lh=kb?vis:baseH;
       var H=lh/s;
-      phone.style.height=H+'px';
+      var up=kb?36:0;
+      phone.style.top=(-up)+'px';
+      phone.style.height=(H+up)+'px';
+      document.documentElement.classList.toggle('kb',kb);
       scaler.style.width=(390*s)+'px';scaler.style.height=lh+'px';
       phone.style.transform=s===1?'none':'scale('+s+')';
       if(kb){
@@ -550,6 +556,7 @@ function makeBleed(gw,gh,cfg){
       return;
     }
     stage.style.cssText='';
+    phone.style.top='';document.documentElement.classList.remove('kb');
     phone.style.height='';
     if(window.syncBg)syncBg();
     var w=stage.clientWidth-32, s=w/390;
@@ -861,11 +868,12 @@ function makeBleed(gw,gh,cfg){
   function syncBg(){
     var r=document.documentElement,full=r.classList.contains('full'),c='';
     if(full){var el=screens[cur];c=el?getComputedStyle(el).backgroundColor:'';
-      if(!c||c==='rgba(0, 0, 0, 0)'||c==='transparent')c=getComputedStyle(phone).backgroundColor;}
+      if(!c||c==='rgba(0, 0, 0, 0)'||c==='transparent')c=getComputedStyle(phone).backgroundColor;
+      if(cur==='mun')c='linear-gradient(#9E2628 0 70%,#240D0E 70%)';}
     r.style.background=c;document.body.style.background=c;
     var m=document.querySelector('meta[name=theme-color]');
     if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m);}
-    if(c)m.content=c;
+    if(c)m.content=(cur==='mun')?'#9E2628':c;
   }
   window.syncBg=syncBg;
   $('#themebtn').addEventListener('click',function(){
