@@ -504,7 +504,7 @@ function makeBleed(gw,gh,cfg){
       var g=0.93+0.07*grain[i];
       var u=(w-0.04)/0.30; u=u<0?0:(u>1?1:u);
       var dil=u*u*(3-2*u)*0.55;
-      var ring=Math.exp(-((w-0.46)*(w-0.46))/0.02), k=1-0.2*ring;
+      var dw=w-0.46,k=(dw>0.45||dw<-0.45)?1:1-0.2*Math.exp(-(dw*dw)/0.02);
       var j=i*4;
       red[j]=(158*(1-dil)+224*dil)*g*k;
       red[j+1]=(38*(1-dil)+134*dil)*g*k;
@@ -523,24 +523,33 @@ function makeBleed(gw,gh,cfg){
 
   /* ---------- 크기 맞춤 ---------- */
   var stage=$('#stage'),scaler=$('#scaler'),phone=$('#phone');
+  var baseH=window.innerHeight;
   function fit(){
     var vw=window.innerWidth,vh=window.innerHeight,MINH=620;
     var full=vw<=520;
-    var ae=document.activeElement;
-    /* keyboard open on a phone: keep the current size instead of shrinking the app */
-    if(full&&stage.classList.contains('full')&&ae&&ae.tagName==='INPUT')return;
+    var vv=window.visualViewport,vis=vv?vv.height:vh;
+    var ae=document.activeElement,typing=!!(ae&&ae.tagName==='INPUT');
     stage.classList.toggle('full',full);
     document.documentElement.classList.toggle('full',full);
     if(full){
-      var s=Math.min(vw/390,vh/MINH);
+      if(!typing||vh>baseH)baseH=vh;
+      var kb=typing&&vis<baseH-120;
+      var s=Math.min(vw/390,baseH/MINH);
       if(Math.abs(s-1)<.03)s=1;      /* avoid fractional scaling (hairline seams on iOS) */
-      var H=vh/s;
+      var lh=kb?vis:baseH;
+      var H=lh/s;
       phone.style.height=H+'px';
-      scaler.style.width=(390*s)+'px';scaler.style.height=vh+'px';
+      scaler.style.width=(390*s)+'px';scaler.style.height=lh+'px';
       phone.style.transform=s===1?'none':'scale('+s+')';
+      if(kb){
+        stage.style.cssText='position:fixed;left:0;top:0;width:100%;height:'+lh+'px;min-height:0;transform:translateY('+(vv?vv.offsetTop:0)+'px)';
+        window.scrollTo(0,0);
+        var m=document.querySelector('.screen[data-pos="center"] .msgs');if(m)m.scrollTop=m.scrollHeight;
+      }else stage.style.cssText='';
       if(window.syncBg)syncBg();
       return;
     }
+    stage.style.cssText='';
     phone.style.height='';
     if(window.syncBg)syncBg();
     var w=stage.clientWidth-32, s=w/390;
@@ -550,6 +559,8 @@ function makeBleed(gw,gh,cfg){
     phone.style.transform='scale('+s+')';
   }
   document.addEventListener('focusout',function(){setTimeout(fit,350);});
+  document.addEventListener('focusin',function(){setTimeout(fit,50);setTimeout(fit,300);});
+  if(window.visualViewport)window.visualViewport.addEventListener('scroll',fit);
   window.addEventListener('resize',fit);window.addEventListener('orientationchange',fit);window.addEventListener('load',fit);if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);fit();
 
   /* ---------- 아바타 ---------- */
@@ -712,29 +723,29 @@ function makeBleed(gw,gh,cfg){
   var holeCv=document.createElement('canvas');holeCv.width=gw;holeCv.height=gh;
   var hctx=holeCv.getContext('2d');
   var redImg=bctx.createImageData(gw,gh),holeImg=hctx.createImageData(gw,gh);
-  var tcv=$('#mtext'),tctx=tcv.getContext('2d');
-  var qcv=document.createElement('canvas');qcv.width=780;qcv.height=1308;var qctx=qcv.getContext('2d');
+  var K=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)?1.25:2,TW=Math.round(390*K),TH=Math.round(654*K);
+  var tcv=$('#mtext');tcv.width=TW;tcv.height=TH;var tctx=tcv.getContext('2d');
+  var qcv=document.createElement('canvas');qcv.width=TW;qcv.height=TH;var qctx=qcv.getContext('2d');
   var LINE='상처는 사랑의 누룩이다';
-  var reveal=0,revealTarget=0,dimS=0,dirty=true,running=false,touched=false;
+  var reveal=0,revealTarget=0,dimS=0,dirty=true,running=false,touched=false,lastFl='';
   function drawLine(c,color){
-    c.save();c.setTransform(2,0,0,2,0,0);
+    c.save();c.setTransform(K,0,0,K,0,0);
     c.font='500 27px "Noto Serif KR","Nanum Myeongjo","Apple Myungjo",serif';
     c.textAlign='center';c.textBaseline='middle';
     if('letterSpacing' in c)c.letterSpacing='1px';
     c.fillStyle=color;c.fillText(LINE,CW/2+0.5,CH/2);
     c.restore();
   }
+  var txtDark=null,txtLight=null;
+  function mkTxt(color){var c=document.createElement('canvas');c.width=TW;c.height=TH;drawLine(c.getContext('2d'),color);return c;}
   function paint(){
+    if(!txtDark){txtDark=mkTxt('#3A1214');txtLight=mkTxt('#F6EDE4');}
     B.render(redImg.data,holeImg.data);
     bctx.putImageData(redImg,0,0);hctx.putImageData(holeImg,0,0);
-    tctx.save();tctx.setTransform(1,0,0,1,0,0);tctx.globalCompositeOperation='source-over';tctx.clearRect(0,0,780,1308);
-    drawLine(tctx,'#3A1214');
-    tctx.globalCompositeOperation='destination-in';tctx.imageSmoothingEnabled=true;tctx.imageSmoothingQuality='high';
-    tctx.drawImage(holeCv,0,0,gw,gh,0,0,780,1308);
-    qctx.save();qctx.setTransform(1,0,0,1,0,0);qctx.globalCompositeOperation='source-over';qctx.clearRect(0,0,780,1308);
-    drawLine(qctx,'#F6EDE4');
-    qctx.globalCompositeOperation='destination-in';qctx.imageSmoothingEnabled=true;qctx.imageSmoothingQuality='high';
-    qctx.drawImage(bleedCv,0,0,gw,gh,0,0,780,1308);qctx.restore();
+    tctx.save();tctx.setTransform(1,0,0,1,0,0);tctx.globalCompositeOperation='copy';tctx.drawImage(txtDark,0,0);
+    tctx.globalCompositeOperation='destination-in';tctx.drawImage(holeCv,0,0,gw,gh,0,0,TW,TH);
+    qctx.save();qctx.setTransform(1,0,0,1,0,0);qctx.globalCompositeOperation='copy';qctx.drawImage(txtLight,0,0);
+    qctx.globalCompositeOperation='destination-in';qctx.drawImage(bleedCv,0,0,gw,gh,0,0,TW,TH);qctx.restore();
     tctx.globalCompositeOperation='source-over';tctx.drawImage(qcv,0,0);
     tctx.restore();
   }
@@ -749,7 +760,7 @@ function makeBleed(gw,gh,cfg){
     if(moved||B.wet||Math.abs(dimT-dimS)>0.002||Math.abs(revealTarget-reveal)>0.002||dirty){
       paint();
       tcv.style.opacity=(reveal*(1-0.55*dimS)).toFixed(3);
-      tcv.style.filter=dimS>0.01?'blur('+(1.2*dimS).toFixed(2)+'px)':'none';
+      var fl=dimS>0.01?'blur('+(1.2*dimS).toFixed(1)+'px)':'none';if(fl!==lastFl){tcv.style.filter=fl;lastFl=fl;}
       dirty=false;
       if(!moved&&B.E===0)B.wet=false;
     }
@@ -770,7 +781,7 @@ function makeBleed(gw,gh,cfg){
   });
   function up(){last=null;}
   cover.addEventListener('pointerup',up);cover.addEventListener('pointercancel',up);
-  if(document.fonts&&document.fonts.load){document.fonts.load('500 27px "Noto Serif KR"').then(function(){dirty=true;});}
+  if(document.fonts&&document.fonts.load){document.fonts.load('500 27px "Noto Serif KR"').then(function(){txtDark=null;dirty=true;});}
 
   /* ---------- 화면 이동 ---------- */
   var cur='lock',nudged=false,seenTri=false,dotCleared=false;
